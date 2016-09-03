@@ -180,16 +180,16 @@ var Laya=window.Laya=(function(window,document){
 
 (function(window,document,Laya){
 	var __un=Laya.un,__uns=Laya.uns,__static=Laya.static,__class=Laya.class,__getset=Laya.getset,__newvec=Laya.__newvec;
-	Laya.interface('laya.resource.IDispose');
+	Laya.interface('laya.filters.IFilterAction');
 	Laya.interface('laya.webgl.shapes.IShape');
 	Laya.interface('laya.display.ILayout');
-	Laya.interface('laya.webgl.resource.IMergeAtlasBitmap');
-	Laya.interface('laya.filters.IFilterAction');
+	Laya.interface('laya.runtime.IConchNode');
+	Laya.interface('laya.resource.IDispose');
 	Laya.interface('laya.webgl.text.ICharSegment');
 	Laya.interface('laya.runtime.IMarket');
-	Laya.interface('laya.runtime.IConchNode');
-	Laya.interface('laya.webgl.submit.ISubmit');
 	Laya.interface('laya.webgl.canvas.save.ISaveData');
+	Laya.interface('laya.webgl.resource.IMergeAtlasBitmap');
+	Laya.interface('laya.webgl.submit.ISubmit');
 	Laya.interface('laya.filters.IFilterActionGL','laya.filters.IFilterAction');
 	/**
 	*@private
@@ -677,6 +677,7 @@ var Laya=window.Laya=(function(window,document){
 		GameInfo.GAME_WIDTH=640;
 		GameInfo.GAME_HEIGHT=1136;
 		GameInfo.FALL_HEIGHT=800;
+		GameInfo.ITEM_AREA_Y=1136-640;
 		GameInfo.ROW_NUM=8;
 		GameInfo.COLUMN_NUM=8;
 		GameInfo.EAT_DURATION=200;
@@ -730,7 +731,11 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		__proto.spitItem=function(){
-			return this.layer._childs;
+			return this._layer.spitItem();
+		}
+
+		__proto.showExtraItem=function(){
+			this._layer.showExtraItem();
 		}
 
 		__getset(0,__proto,'layer',function(){
@@ -19413,6 +19418,9 @@ var Laya=window.Laya=(function(window,document){
 					this._player.turnTo(0);
 					this._gameMgr.gameStep(0,1);
 					break ;
+				case 32:
+					this._gameMgr.spitAll();
+					break ;
 				}
 		}
 
@@ -19468,8 +19476,23 @@ var Laya=window.Laya=(function(window,document){
 		__proto.pushItem=function(item){
 			this._stomach.addChild(item);
 			item.scale(0.1,0.1);
+			if (this._stomach._childs.length > 8){
+				item.pos(70 *(this._stomach._childs.length-8),40);
+				item.visible=false;
+				return;
+			}
 			item.pos(70 *this._stomach._childs.length,40);
 			Tween.to(item,{scaleX:0.8,scaleY:0.8},500,Ease.bounceOut);
+		}
+
+		__proto.showExtraItem=function(){
+			for (var i=0;i < this._stomach._childs.length;i++){
+				var item=this._stomach._childs [i];
+				if (!item.visible){
+					item.visible=true;
+					Tween.to(item,{scaleX:0.8,scaleY:0.8},500,Ease.bounceOut);
+				}
+			}
 		}
 
 		__proto.isFill=function(){
@@ -19477,6 +19500,10 @@ var Laya=window.Laya=(function(window,document){
 				return true;
 			}
 			return false;
+		}
+
+		__proto.spitItem=function(){
+			return this._stomach._childs;
 		}
 
 		return StomachLayer;
@@ -19533,6 +19560,7 @@ var Laya=window.Laya=(function(window,document){
 				this._fallList.pushBack(item);
 				this.timerOnce(200,this,this.eliminate);
 				}else {
+				Tween.to(this._player,{x:item.x,y:item.y},200);
 				this._player.eatItem(item);
 				this._itemArr[this._player.row][this._player.column]=null;
 				this.timerOnce(200,this,this.fallByEat);
@@ -19710,7 +19738,6 @@ var Laya=window.Laya=(function(window,document){
 
 		// 补充物品
 		__proto.addItem=function(){
-			var beginX=1136-640;
 			for (var row=0;row < this._itemArr.length;row++){
 				for (var column=0;column < this._itemArr[0].length;column++){
 					if (this._itemArr[row][column]==null){
@@ -19719,11 +19746,69 @@ var Laya=window.Laya=(function(window,document){
 						this._itemArr[row][column]=item;
 						item.site(row,column);
 						this.parent.addChild(item);
-						item.pos((column+0.5)*80,beginX+row *80);
+						item.pos((column+0.5)*80,GameInfo.ITEM_AREA_Y+row *80);
 					}
 				}
 			}
 			NotifyCenter.getInstance().event(NotifyCenter.KEYBORADCTRL,[true]);
+		}
+
+		// 吐出所有物品
+		__proto.spitAll=function(){
+			if (!StomachManager.getInstance().isFill()){
+				return;
+			};
+			var row=0;
+			var column=0;
+			var playerRow=this._player.row;
+			var playerIsTop=false;
+			for (column=0;column < this._itemArr[0].length;column++){
+				var entity=this._itemArr[0] [column];
+				if (entity.tag==0){
+					playerIsTop=true;
+					continue ;
+				}
+				Tween.to(entity,{y:entity.y-80},200,null,
+				new Handler(entity,(entity).removeAction));
+				this._itemArr[0][column]=null;
+			}
+			if (playerIsTop){
+				for (column=0;column < this._itemArr[1].length;column++){
+					var entity=this._itemArr[1] [column];
+					if (column==this._player.column){
+						this._player.eatItem(entity);
+						}else {
+						Tween.to(entity,{y:entity.y-80},200);
+						this._itemArr[0][column]=entity;
+						entity.site(0,column);
+						this._itemArr[1][column]=null;
+					}
+				}
+			}
+			else {
+				for (row=1;row <=playerRow;row++){
+					for (column=0;column < this._itemArr[0].length;column++){
+						var entity=this._itemArr[row] [column];
+						Tween.to(entity,{y:entity.y-80},200);
+						this._itemArr[row-1][column]=entity;
+						entity.site(row-1,column);
+						this._itemArr[row][column]=null;
+					}
+				}
+			}
+			if (playerIsTop)playerRow++;
+			var spitArr=StomachManager.getInstance().spitItem();
+			for (column=7;column >=0;column--){
+				var item=spitArr [column];
+				item.scale(1,1);
+				this.parent.addChild(item);
+				item.pos((column+0.5)*80,
+				GameInfo.ITEM_AREA_Y+playerRow *80);
+				this._itemArr[playerRow][column]=item;
+				item.site(playerRow,column);
+				item.playAddAnime();
+			}
+			StomachManager.getInstance().showExtraItem();
 		}
 
 		// 显示数据
@@ -22049,10 +22134,10 @@ var Laya=window.Laya=(function(window,document){
 		}
 
 		__proto.playAddAnime=function(){
-			var scaleAnime=new TimeLine();
-			scaleAnime.to(this,{scaleX:1.5,scaleY:1.5},100)
+			var scaleAction=new TimeLine();
+			scaleAction.to(this,{scaleX:1.5,scaleY:1.5},100)
 			.to(this,{scaleX:1.0,scaleY:1.0},100);
-			scaleAnime.play();
+			scaleAction.play();
 		}
 
 		__getset(0,__proto,'sign',function(){
@@ -22085,12 +22170,11 @@ var Laya=window.Laya=(function(window,document){
 		__class(PacMan,'entity.PacMan',_super);
 		var __proto=PacMan.prototype;
 		__proto.eatItem=function(item){
-			Tween.to(this,{x:item.x,y:item.y},200);
-			var anime=new TimeLine();
+			var action=new TimeLine();
 			var flipX=this._dir==0 ?-1 :1;
-			anime.to(this,{scaleX:1.5 *flipX,scaleY:1.5},200 / 2)
+			action.to(this,{scaleX:1.5 *flipX,scaleY:1.5},200 / 2)
 			.to(this,{scaleX:1.0 *flipX,scaleY:1.0},200 / 2);
-			anime.play();
+			action.play();
 			this._stomach.pushItem(item);
 		}
 

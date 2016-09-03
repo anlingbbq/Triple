@@ -51,11 +51,11 @@ package entity
 		
 		public function playAddAnime():void
 		{
-			var scaleAnime:TimeLine = new TimeLine();
-			scaleAnime.to(this, {scaleX:1.5, scaleY:1.5}, 100)
-				 .to(this, {scaleX:1.0, scaleY:1.0}, 100);
+			var scaleAction:TimeLine = new TimeLine();
+			scaleAction.to(this, {scaleX:1.5, scaleY:1.5}, 100)
+				.to(this, {scaleX:1.0, scaleY:1.0}, 100);
 			
-			scaleAnime.play();
+			scaleAction.play();
 		}
 		
 		public function get sign():Boolean

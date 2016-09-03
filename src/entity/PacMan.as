@@ -34,15 +34,13 @@ package entity
 			this.pivot(this.width / 2, this.height / 2);
 		}
 		
-		public function eatItem(item:Item):void
+		public function eatItem(item:Entity):void
 		{
-			Tween.to(this, {x:item.x, y:item.y}, GameInfo.EAT_DURATION);
-			
-			var anime:TimeLine = new TimeLine();
+			var action:TimeLine = new TimeLine();
 			var flipX:int = _dir == LEFT ? -1 : 1;
-			anime.to(this, {scaleX:1.5 * flipX, scaleY:1.5}, GameInfo.EAT_DURATION / 2)
+			action.to(this, {scaleX:1.5 * flipX, scaleY:1.5}, GameInfo.EAT_DURATION / 2)
 				 .to(this, {scaleX:1.0 * flipX, scaleY:1.0}, GameInfo.EAT_DURATION / 2);
-			anime.play();
+			action.play();
 			
 			_stomach.pushItem(item);
 		}

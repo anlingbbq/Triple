@@ -45,7 +45,12 @@ package manager
 		
 		public function spitItem():Array
 		{
-			return layer._childs;
+			return _layer.spitItem();
+		}
+		
+		public function showExtraItem():void
+		{
+			_layer.showExtraItem();
 		}
 	}
 

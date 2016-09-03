@@ -91,6 +91,7 @@ package manager
 				this.timerOnce(200, this, eliminate);
 			} else {
 				// 吃掉
+				Tween.to(_player, {x:item.x, y:item.y}, GameInfo.EAT_DURATION);
 				_player.eatItem(item);
 				
 				// 数组中移除
@@ -328,7 +329,7 @@ package manager
 		// 补充物品
 		private function addItem():void
 		{
-			var beginX:int = GameInfo.GAME_HEIGHT - GameInfo.GAME_WIDTH;
+
 			for (var row:int = 0; row < _itemArr.length; row++)
 			{
 				for (var column:int = 0; column < _itemArr[0].length; column++)
@@ -341,36 +342,84 @@ package manager
 						item.site(row, column);
 						
 						parent.addChild(item);
-						item.pos((column + 0.5) * GameInfo.ITEM_WIDTH, beginX + row * GameInfo.ITEM_HEIGHT);
+						item.pos((column + 0.5) * GameInfo.ITEM_WIDTH, GameInfo.ITEM_AREA_Y + row * GameInfo.ITEM_HEIGHT);
 					}
 				}
 			}
-			
+			// 这里延时100毫秒
 			NotifyCenter.getInstance().event(NotifyCenter.KEYBORADCTRL, [true]);
 		}
 	
 		// 吐出所有物品
 		public function spitAll():void
 		{
-			var arr:Array = StomachManager.getInstance().spitItem();
-			// 移除最上一排
-			for (var i:int = 0; i < _itemArr[0].length; i++) 
-			{
-				var item:Item = _itemArr[0][i] as Item;
-				_itemArr[0][i] = null;
-				item.remove();
+			if (!StomachManager.getInstance().isFill()) {
+				return;
 			}
 			
-			// 玩家及其以上物品上移一排
+			// ------------------- 玩家及其以上整体上移 -------------------
+			var row:int;
+			var column:int;
 			var playerRow:int = _player.row;
-			for (var i:int = 1; i < playerRow; i++):void
+			var playerIsTop:Boolean = false;
+			// 处理最上排
+			for (column = 0; column < _itemArr[0].length; column++)
 			{
-				for (var j:int = 0; j < _itemArr[i].length; j++)
+				var entity:Entity = _itemArr[0][column] as Entity;
+				if (entity.tag == 0) {
+					playerIsTop = true;
+					continue;
+				}
+				Tween.to(entity, {y:entity.y - GameInfo.ITEM_HEIGHT}, 200, null,
+					new Handler(entity, (entity as Item).removeAction));
+				_itemArr[0][column] = null;
+			}
+			// 处理剩下物品
+			if (playerIsTop) {
+				for (column = 0; column < _itemArr[1].length; column++)
 				{
-					var entity:Entity = _itemArr[i][j] as Entity;
-					
+					var entity:Entity = _itemArr[1][column] as Entity;
+					if (column == _player.column) {
+						//_player.turnTo(90);
+						_player.eatItem(entity);
+					} else {
+						Tween.to(entity, {y:entity.y - GameInfo.ITEM_HEIGHT}, 200);
+						_itemArr[0][column] = entity;
+						entity.site(0, column);
+						_itemArr[1][column] = null;
+					}
 				}
 			}
+			else {
+				for (row = 1; row <= playerRow; row++)
+				{
+					for (column = 0; column < _itemArr[0].length; column++)
+					{
+						var entity:Entity = _itemArr[row][column] as Entity;
+						Tween.to(entity, {y:entity.y - GameInfo.ITEM_HEIGHT}, GameInfo.EAT_DURATION);
+						_itemArr[row - 1][column] = entity;
+						entity.site(row - 1, column);
+						_itemArr[row][column] = null;
+					}
+				}
+			}
+			// ---------------------------- END ---------------------------
+			// 添加吐出的一排
+			if (playerIsTop) playerRow++;
+			var spitArr:Array = StomachManager.getInstance().spitItem();
+			for (column = 7; column >= 0; column--)
+			{
+				var item:Item = spitArr[column] as Item;
+				item.scale(1, 1);
+				parent.addChild(item);
+				
+				item.pos((column + 0.5) * GameInfo.ITEM_WIDTH,
+					GameInfo.ITEM_AREA_Y + playerRow * GameInfo.ITEM_HEIGHT);
+				_itemArr[playerRow][column] = item;
+				item.site(playerRow, column);
+				item.playAddAnime();
+			}
+			StomachManager.getInstance().showExtraItem();
 		}
 		
 		// 显示数据
