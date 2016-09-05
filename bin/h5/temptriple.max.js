@@ -180,16 +180,16 @@ var Laya=window.Laya=(function(window,document){
 
 (function(window,document,Laya){
 	var __un=Laya.un,__uns=Laya.uns,__static=Laya.static,__class=Laya.class,__getset=Laya.getset,__newvec=Laya.__newvec;
-	Laya.interface('laya.filters.IFilterAction');
-	Laya.interface('laya.webgl.shapes.IShape');
-	Laya.interface('laya.display.ILayout');
-	Laya.interface('laya.runtime.IConchNode');
-	Laya.interface('laya.resource.IDispose');
-	Laya.interface('laya.webgl.text.ICharSegment');
-	Laya.interface('laya.runtime.IMarket');
-	Laya.interface('laya.webgl.canvas.save.ISaveData');
-	Laya.interface('laya.webgl.resource.IMergeAtlasBitmap');
 	Laya.interface('laya.webgl.submit.ISubmit');
+	Laya.interface('laya.webgl.text.ICharSegment');
+	Laya.interface('laya.filters.IFilterAction');
+	Laya.interface('laya.runtime.IConchNode');
+	Laya.interface('laya.webgl.canvas.save.ISaveData');
+	Laya.interface('laya.webgl.shapes.IShape');
+	Laya.interface('laya.runtime.IMarket');
+	Laya.interface('laya.display.ILayout');
+	Laya.interface('laya.resource.IDispose');
+	Laya.interface('laya.webgl.resource.IMergeAtlasBitmap');
 	Laya.interface('laya.filters.IFilterActionGL','laya.filters.IFilterAction');
 	/**
 	*@private
@@ -369,6 +369,23 @@ var Laya=window.Laya=(function(window,document){
 		['conchMarket',function(){return this.conchMarket=window.conch?conchMarket:null;}
 		]);
 		return Laya;
+	})()
+
+
+	/**
+	*...
+	*@author anling
+	*/
+	//class data.EffectData
+	var EffectData=(function(){
+		function EffectData(){
+			this.type=0;
+			this.size=0;
+			this.sameArr=[];
+		}
+
+		__class(EffectData,'data.EffectData');
+		return EffectData;
 	})()
 
 
@@ -669,6 +686,7 @@ var Laya=window.Laya=(function(window,document){
 	*/
 	//class GameInfo
 	var GameInfo=(function(){
+		// 消除相同物品
 		function GameInfo(){}
 		__class(GameInfo,'GameInfo');
 		GameInfo.ITEM_TYPE_NUM=8;
@@ -681,6 +699,8 @@ var Laya=window.Laya=(function(window,document){
 		GameInfo.ROW_NUM=8;
 		GameInfo.COLUMN_NUM=8;
 		GameInfo.EAT_DURATION=200;
+		GameInfo.EXPLOSION=1;
+		GameInfo.SAME_REMOVE=2;
 		return GameInfo;
 	})()
 
@@ -711,13 +731,16 @@ var Laya=window.Laya=(function(window,document){
 
 
 	/**
-	*...
+	*管理吃下的物品以及特效类型判断
 	*@author anling
 	*/
 	//class manager.StomachManager
 	var StomachManager=(function(){
 		function StomachManager(){
 			this._layer=null;
+			this.lastTag=0;
+			this.sameCount=0;
+			this.effectData=new EffectData();
 		}
 
 		__class(StomachManager,'manager.StomachManager');
@@ -728,6 +751,7 @@ var Laya=window.Laya=(function(window,document){
 
 		__proto.pushItem=function(item){
 			this.layer.pushItem(item);
+			this.adjustEffectType();
 		}
 
 		__proto.spitItem=function(){
@@ -736,6 +760,35 @@ var Laya=window.Laya=(function(window,document){
 
 		__proto.showExtraItem=function(){
 			this._layer.showExtraItem();
+		}
+
+		__proto.adjustEffectType=function(){
+			var stomachArr=this.layer.spitItem();
+			if (stomachArr.length >=3){
+				var arr=[];
+				for (var i=0;i < stomachArr.length;i++){
+					var item=stomachArr [i];
+					if (this.lastTag==item.tag){
+						this.sameCount++;
+						arr.push(item);
+					}
+					else {
+						this.sameCount=1;
+						arr=[];
+						arr.push(item);
+					}
+					if (this.sameCount >=3){
+						for (var j=0;j < this.sameCount;j++){
+							var effectItem=stomachArr [j];
+							effectItem.effectStat();
+						}
+						if (stomachArr.length==8)
+							this.effectData.sameArr.push(arr);
+						this.sameCount=0;
+					}
+					this.lastTag=item.tag;
+				}
+			}
 		}
 
 		__getset(0,__proto,'layer',function(){
@@ -19806,7 +19859,7 @@ var Laya=window.Laya=(function(window,document){
 				GameInfo.ITEM_AREA_Y+playerRow *80);
 				this._itemArr[playerRow][column]=item;
 				item.site(playerRow,column);
-				item.playAddAnime();
+				item.playAddAction();
 			}
 			StomachManager.getInstance().showExtraItem();
 		}
@@ -22130,14 +22183,20 @@ var Laya=window.Laya=(function(window,document){
 			var texture=Laya.loader.getRes("fruit/item_"+this.tag+".png");
 			this.graphics.clear();
 			this.graphics.drawTexture(texture,0,0);
-			this.playAddAnime();
+			this.playAddAction();
 		}
 
-		__proto.playAddAnime=function(){
+		__proto.playAddAction=function(){
 			var scaleAction=new TimeLine();
 			scaleAction.to(this,{scaleX:1.5,scaleY:1.5},100)
 			.to(this,{scaleX:1.0,scaleY:1.0},100);
 			scaleAction.play();
+		}
+
+		__proto.effectStat=function(){
+			var texture=Laya.loader.getRes("fruit/item_"+this.tag+"_1.png");
+			this.graphics.clear();
+			this.graphics.drawTexture(texture,0,0);
 		}
 
 		__getset(0,__proto,'sign',function(){
@@ -23156,7 +23215,7 @@ var Laya=window.Laya=(function(window,document){
 	})(HTMLImage)
 
 
-	Laya.__init([EventDispatcher,TimeLine,Render,Browser,WebGLContext,WebGLContext2D,LoaderManager,RenderTargetMAX,Timer,DrawText,AtlasGrid,ShaderCompile]);
+	Laya.__init([EventDispatcher,TimeLine,Render,Browser,WebGLContext,WebGLContext2D,LoaderManager,RenderTargetMAX,Timer,AtlasGrid,ShaderCompile,DrawText]);
 	new Main();
 
 })(window,document,Laya);

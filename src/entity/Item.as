@@ -49,13 +49,20 @@ package entity
 			playAddAnime();
 		}
 		
-		public function playAddAnime():void
+		public function playAddAction():void
 		{
 			var scaleAction:TimeLine = new TimeLine();
 			scaleAction.to(this, {scaleX:1.5, scaleY:1.5}, 100)
 				.to(this, {scaleX:1.0, scaleY:1.0}, 100);
 			
 			scaleAction.play();
+		}
+		
+		public function effectStat():void
+		{
+			var texture:Texture = Laya.loader.getRes("fruit/item_" + tag + "_1.png");
+			this.graphics.clear();
+			this.graphics.drawTexture(texture, 0, 0);
 		}
 		
 		public function get sign():Boolean

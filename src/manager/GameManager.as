@@ -417,7 +417,7 @@ package manager
 					GameInfo.ITEM_AREA_Y + playerRow * GameInfo.ITEM_HEIGHT);
 				_itemArr[playerRow][column] = item;
 				item.site(playerRow, column);
-				item.playAddAnime();
+				item.playAddAction();
 			}
 			StomachManager.getInstance().showExtraItem();
 		}

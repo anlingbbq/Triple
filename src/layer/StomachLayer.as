@@ -26,6 +26,7 @@ package layer
 		{
 			_stomach.addChild(item);
 			item.scale(0.1, 0.1);
+			
 			// 额外的物品
 			if (_stomach._childs.length > 8)
 			{

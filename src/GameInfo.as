@@ -27,7 +27,12 @@ package
 		public static const ROW_NUM:int = 8;
 		public static const COLUMN_NUM:int = 8;
 		
+		// 玩家吃物品的时间
 		public static const EAT_DURATION:int = 200;
+		
+		// ------------------ 特效类型 ------------------ 
+		public static const EXPLOSION:int = 1;  // 以玩家为中心爆炸
+		public static const SAME_REMOVE:int = 2;// 消除相同物品
 		
 		public function GameInfo() 
 		{
