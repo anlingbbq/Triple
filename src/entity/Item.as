@@ -46,7 +46,7 @@ package entity
 			this.graphics.clear();
 			this.graphics.drawTexture(texture, 0, 0);
 			
-			playAddAnime();
+			playAddAction();
 		}
 		
 		public function playAddAction():void
