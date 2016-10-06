@@ -16,7 +16,7 @@
   <!-- Other classes to be compiled into your SWF -->
   <classpaths>
     <class path="src" />
-    <class path="E:\LayaAir\publish\LayaAirPublish\bin\as\libs" />
+    <class path="libs\src" />
   </classpaths>
   <!-- Build options -->
   <build>
